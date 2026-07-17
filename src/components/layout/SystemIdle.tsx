@@ -18,7 +18,7 @@ export const SystemIdle: React.FC<SystemIdleProps> = ({ estimatedCombinations })
   const { theme } = useTheme(); // use the properly imported hook
 
   return (
-    <div className={css(utils.flexColumn, utils.alignItemsCenter, utils.justifyCenter, utils.height100P, styles.systemIdle)}>
+    <article className={css(utils.flexColumn, utils.alignItemsCenter, utils.justifyCenter, utils.height100P, styles.systemIdle)}>
       <span className="material-symbols-outlined" style={{ fontSize: 48, color: theme.colors.onSurface, marginBottom: 8 }}>memory</span>
       <p style={{ fontFamily: theme.typography.fontMono, fontSize: theme.typography.sizes.bodyMd, fontWeight: 600, color: theme.colors.onSurface }}>System Ready</p>
       <p style={{ fontFamily: theme.typography.fontMono, fontSize: theme.typography.sizes.labelCaps, color: theme.colors.onSurfaceVariant }}>
@@ -32,7 +32,7 @@ export const SystemIdle: React.FC<SystemIdleProps> = ({ estimatedCombinations })
           </Text>
         </div>
       )}
-    </div>
+    </article>
   );
 };
 

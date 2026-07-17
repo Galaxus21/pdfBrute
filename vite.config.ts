@@ -13,7 +13,7 @@ export default defineConfig({
     format: 'es',
   },
   server: {
-    allowedHosts: ['6531-103-162-200-157.ngrok-free.app']
+    allowedHosts: true
   },
   build: {
     chunkSizeWarningLimit: 1500, // pdfjs worker is large

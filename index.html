@@ -7,9 +7,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Primary SEO -->
-  <title>PDFBrute — PDF Password Recovery (Client-Side, Private)</title>
-  <meta name="description" content="Recover access to your own encrypted PDFs instantly with PDFBrute. Define a password pattern and let the browser do the work — your file never leaves your device. 100% private, no uploads." />
-  <meta name="keywords" content="PDF password recovery, PDF unlock, client-side PDF, PDF brute force, recover PDF password, encrypted PDF, PDF password finder, private PDF tool" />
+  <title>PDFBrute — PDF Password Recovery (Client-Side, Multi-Core)</title>
+  <meta name="description"
+    content="Recover access to your encrypted PDFs instantly with PDFBrute. Uses multi-core Web Workers and bidirectional search for blazing fast, 100% private client-side processing." />
+  <meta name="keywords"
+    content="PDF password recovery, PDF unlock, client-side PDF, PDF brute force, multi-core PDF cracker, web workers, bidirectional search, private PDF tool, on device, no install, offline PDF unlock, secure PDF unlocker, hardware accelerated" />
   <meta name="author" content="PDFBrute" />
   <meta name="robots" content="index, follow" />
 
@@ -20,7 +22,8 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://pdfbrute.web.app/" />
   <meta property="og:title" content="PDFBrute — PDF Password Recovery" />
-  <meta property="og:description" content="Recover access to your own encrypted PDFs using custom password patterns. Runs entirely in your browser — your file never leaves your device." />
+  <meta property="og:description"
+    content="Recover access to your encrypted PDFs on-device using custom password patterns. 100% private, and your file never leaves your device." />
   <meta property="og:image" content="https://pdfbrute.web.app/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -31,44 +34,70 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:url" content="https://pdfbrute.web.app/" />
   <meta name="twitter:title" content="PDFBrute — PDF Password Recovery" />
-  <meta name="twitter:description" content="Recover access to your own encrypted PDFs using custom password patterns. Runs entirely in your browser — your file never leaves your device." />
+  <meta name="twitter:description"
+    content="Recover access to your encrypted PDFs on-device using custom password patterns. 100% private, no install required, and your file never leaves your device." />
   <meta name="twitter:image" content="https://pdfbrute.web.app/og-image.png" />
 
   <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "PDFBrute",
-    "url": "https://pdfbrute.web.app/",
-    "description": "Client-side PDF password recovery tool. Recover access to your own encrypted PDFs using custom password patterns. Your file never leaves your browser.",
-    "applicationCategory": "UtilitiesApplication",
-    "operatingSystem": "Any (Browser-based)",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    },
-    "featureList": [
-      "100% client-side processing",
-      "File never leaves the browser",
-      "Custom password pattern builder",
-      "AES-256 encrypted PDF support",
-      "No account or signup required"
-    ],
-    "browserRequirements": "Requires a modern browser with Web Workers support"
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "PDFBrute",
+        "url": "https://pdfbrute.web.app/",
+        "description": "Client-side PDF password recovery tool. Recover access to your encrypted PDFs on-device using custom password patterns. Uses multi-core Web Workers and bidirectional search for blazing fast parallel processing.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any (Browser-based)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": [
+          "100% client-side processing",
+          "Multi-core Web Worker parallelization",
+          "Bidirectional search algorithm",
+          "File never leaves the browser"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [{
+          "@type": "Question",
+          "name": "Is PDFBrute secure and private?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, PDFBrute runs 100% locally on your device in your web browser. Your PDF files are never uploaded to any server, guaranteeing total privacy."
+          }
+        }]
+      }
+    ]
   }
   </script>
 
   <!-- Fonts -->
-  <link href="https://fonts.googleapis.com" rel="preconnect"/>
-  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap"
+    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap"
+    rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block"
+    rel="stylesheet" />
 
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
       background-color: var(--color-background);
       color: var(--color-on-surface);
@@ -79,7 +108,24 @@
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <!-- SEO App Shell / Semantic Definition Block (Replaced by React on load) -->
+    <main style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;">
+      <header>
+        <h1>PDFBrute — PDF Password Recovery</h1>
+        <p><strong>What is PDFBrute?</strong> PDFBrute is a highly secure, client-side tool to recover access to your encrypted PDFs on-device using custom password patterns. It uses multi-core Web Workers and a bidirectional search algorithm for blazing fast performance. 100% private, no install required, and your file never leaves your browser.</p>
+      </header>
+      <section>
+        <h2>Key Features</h2>
+        <ul>
+          <li><strong>100% Privacy:</strong> Files are processed locally on your device.</li>
+          <li><strong>Multi-Core Parallelization:</strong> Uses all available CPU cores via Web Workers.</li>
+          <li><strong>Bidirectional Search:</strong> Cuts worst-case search times in half by squeezing the search space.</li>
+          <li><strong>No Install:</strong> Pure web application accessible from any modern browser.</li>
+        </ul>
+      </section>
+    </main>
+  </div>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 

@@ -12,6 +12,24 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme }) => {
   const styles = useThemeStyles(getStyles);
 
+  const handleShare = async () => {
+    const shareData = {
+      title: 'PDFBrute - PDF Password Recovery',
+      text: 'Recover your forgotten PDF passwords securely in your browser using multi-core parallel processing and bidirectional search. 100% private, no uploads!',
+      url: window.location.href,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('Link copied to clipboard!');
+      }
+    } catch (err) {
+      console.error('Error sharing:', err);
+    }
+  };
+
   return (
     <div className={css(styles.headerWrapper)}>
       <header className={css(utils.flexRow, utils.alignItemsCenter, utils.justifySpaceBetween, styles.header)}>
@@ -23,6 +41,14 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme }) => {
           </div>
         </div>
         <div className={css(utils.flexRow, utils.alignItemsCenter, styles.headerRight)}>
+          <button
+            aria-label="Share PDFBrute"
+            className={css(utils.flexRow, styles.iconButton)}
+            onClick={handleShare}
+            title="Share PDFBrute"
+          >
+            <span className="material-symbols-outlined">share</span>
+          </button>
           <button
             aria-label="Toggle Theme"
             className={css(utils.flexRow, styles.iconButton)}

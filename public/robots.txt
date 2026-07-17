@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://pdforce.app/sitemap.xml
+Sitemap: https://pdfbrute.web.app/sitemap.xml

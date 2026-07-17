@@ -106,7 +106,7 @@ export function usePDFRecovery() {
 
             let totalTested = 0;
             let totalSpeed = 0;
-            let currentPwd = msg.current;
+            const currentPwd = msg.current;
             let maxElapsed = 0;
 
             workerStatsRef.current.forEach(stats => {
