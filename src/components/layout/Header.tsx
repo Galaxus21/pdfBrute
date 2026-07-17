@@ -81,10 +81,10 @@ const getStyles = (theme: ThemeTokens) => ({
   iconButton: {
     background: 'none',
     border: 'none',
-    color: theme.colors.onSurfaceVariant,
     padding: theme.spacing.unit,
     borderRadius: '9999px',
     cursor: 'pointer',
-    ':hover': { color: theme.colors.secondary, backgroundColor: theme.colors.surfaceContainer },
+    color: theme.colors.secondary,
+    backgroundColor: theme.colors.surfaceContainer,
   },
 });
