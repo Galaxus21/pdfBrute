@@ -41,6 +41,10 @@ export interface WorkerStartMessage {
   pdfBuffer: ArrayBuffer;
   tokens: PatternToken[];
   knownChars: string[];
+  direction: 'forward' | 'reverse';
+  strideId: number;
+  strideCount: number;
+  isBidirectional: boolean;
 }
 
 interface WorkerStopMessage {
@@ -98,6 +102,7 @@ export interface RecoveryState {
   elapsedMs: number;
   foundPassword: string | null;
   errorMessage: string | null;
+  activeWorkers: number;
 }
 
 export interface PatternConfig {

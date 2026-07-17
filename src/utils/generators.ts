@@ -129,9 +129,11 @@ export class ConstrainedGenerator implements GeneratorStrategy {
  */
 export class CartesianProductGenerator implements GeneratorStrategy {
   private readonly pools: GeneratorStrategy[];
+  private readonly direction: 'forward' | 'reverse';
 
-  constructor(generators: GeneratorStrategy[]) {
+  constructor(generators: GeneratorStrategy[], direction: 'forward' | 'reverse' = 'forward') {
     this.pools = generators;
+    this.direction = direction;
   }
 
   size(): number {
@@ -139,7 +141,13 @@ export class CartesianProductGenerator implements GeneratorStrategy {
   }
 
   *values(): IterableIterator<string> {
-    const pools = this.pools.map(g => [...g.values()]);
+    const pools = this.pools.map(g => {
+      const arr = [...g.values()];
+      if (this.direction === 'reverse') {
+        arr.reverse();
+      }
+      return arr;
+    });
     yield* cartesianProduct(pools);
   }
 }

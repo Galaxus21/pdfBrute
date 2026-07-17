@@ -17,12 +17,12 @@ interface ProgressBarProps {
 
 export const RecoveryProgress: React.FC<ProgressBarProps> = ({ state }) => {
   const styles = useThemeStyles(getStyles);
-  
+
   const { currentPassword: currentCandidate, tested, total: totalCombinations, speed, elapsedMs } = state;
   const isDone = state.status === 'found' || state.status === 'exhausted';
 
   const progress = totalCombinations > 0 ? (tested / totalCombinations) * 100 : 0;
-  
+
   const stats = {
     totalTested: tested,
     speed,
@@ -36,9 +36,13 @@ export const RecoveryProgress: React.FC<ProgressBarProps> = ({ state }) => {
   };
 
   const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    
+    if (h > 0) return `${h}h ${m}m ${s}s`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
   };
 
   // Prevent divide by zero / initial state issues
@@ -50,11 +54,15 @@ export const RecoveryProgress: React.FC<ProgressBarProps> = ({ state }) => {
     <section className={css(styles.wrapper)}>
       {/* Top accent bar */}
       <div className={css(styles.topAccent)}></div>
-      
+
       {/* Header */}
       <div className={css(utils.flexRow, utils.justifySpaceBetween, utils.alignItemsCenter, styles.header)}>
-        <h2 className={css(utils.flexRow, utils.alignItemsCenter, styles.headerTitle)}>2. RECOVERY PROGRESS</h2>
-        <span className={css(styles.workerBadge)}>Worker 1</span>
+        <h2 className={css(utils.flexRow, utils.alignItemsCenter, styles.headerTitle)}>RECOVERY PROGRESS</h2>
+        {state.activeWorkers > 0 && (
+          <span className={css(styles.workerBadge)}>
+            {state.activeWorkers} {state.activeWorkers === 1 ? 'Worker' : 'Workers'} Active
+          </span>
+        )}
       </div>
 
       {/* Candidate Preview */}
@@ -69,8 +77,8 @@ export const RecoveryProgress: React.FC<ProgressBarProps> = ({ state }) => {
       {/* Progress Bar Track */}
       <div className={css(styles.barTrackWrapper)}>
         <div className={css(styles.barTrack)}>
-          <div 
-            className={css(styles.barFill)} 
+          <div
+            className={css(styles.barFill)}
             style={{ width: `${percent}%` }}
           >
             <div className={css(styles.barThumb)}></div>

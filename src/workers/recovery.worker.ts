@@ -55,7 +55,11 @@ let currentLoadingTask: pdfjsLib.PDFDocumentLoadingTask | null = null;
 async function runRecovery(
   pdfBuffer: ArrayBuffer,
   tokens: PatternToken[],
-  knownChars: string[]
+  knownChars: string[],
+  direction: 'forward' | 'reverse',
+  strideId: number,
+  strideCount: number,
+  isBidirectional: boolean
 ): Promise<void> {
   // Wrap once — used for the pre-flight check and the main brute force loop
   const pdfBytes = new Uint8Array(pdfBuffer);
@@ -76,11 +80,12 @@ async function runRecovery(
     return new ConstrainedGenerator(baseGen, len, tokenConstraints);
   });
 
-  const composite = new CartesianProductGenerator(generators);
+  const composite = new CartesianProductGenerator(generators, direction);
   const total = composite.size();
   const iterator = composite.values();
 
   let tested = 0;
+  let globalIndex = 0;
   const startTime = Date.now();
   let lastProgressTime = startTime;
   const PROGRESS_INTERVAL_MS = 250;
@@ -107,6 +112,11 @@ async function runRecovery(
     data: pdfBytes, // NO SLICE(0)! This is the huge optimization.
   });
 
+  let limit = total;
+  if (isBidirectional) {
+    limit = direction === 'forward' ? Math.ceil(total / 2) : Math.floor(total / 2);
+  }
+
   // Event-driven brute-force loop
   currentLoadingTask.onPassword = (updatePassword: (password: string) => void) => {
     if (stopped) {
@@ -115,15 +125,29 @@ async function runRecovery(
       return;
     }
 
-    const next = iterator.next();
-    if (next.done) {
-      // We ran out of passwords to try
-      exhausted = true;
-      if (currentLoadingTask) currentLoadingTask.destroy();
-      return;
+    let candidate: string | undefined;
+    while (true) {
+      if (globalIndex >= limit) {
+        exhausted = true;
+        if (currentLoadingTask) currentLoadingTask.destroy();
+        return;
+      }
+
+      const next = iterator.next();
+      if (next.done) {
+        // We ran out of passwords to try
+        exhausted = true;
+        if (currentLoadingTask) currentLoadingTask.destroy();
+        return;
+      }
+
+      const currentGlobalIndex = globalIndex++;
+      if (currentGlobalIndex % strideCount === strideId) {
+        candidate = next.value;
+        break;
+      }
     }
 
-    const candidate = next.value;
     tested++;
 
     const now = Date.now();
@@ -187,7 +211,11 @@ self.onmessage = async (event: MessageEvent<WorkerInMessage>) => {
       await runRecovery(
         msg.pdfBuffer,
         msg.tokens,
-        msg.knownChars
+        msg.knownChars,
+        msg.direction,
+        msg.strideId,
+        msg.strideCount,
+        msg.isBidirectional
       );
     } catch (err) {
       const errMsg: WorkerOutMessage = {

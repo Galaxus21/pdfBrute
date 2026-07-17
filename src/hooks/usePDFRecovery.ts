@@ -26,14 +26,16 @@ const INITIAL_STATE: RecoveryState = {
   elapsedMs: 0,
   foundPassword: null,
   errorMessage: null,
+  activeWorkers: 0,
 };
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function usePDFRecovery() {
   const [state, setState] = useState<RecoveryState>(INITIAL_STATE);
-  const workerRef = useRef<Worker | null>(null);
+  const workersRef = useRef<Worker[]>([]);
   const pdfBufferRef = useRef<ArrayBuffer | null>(null);
+  const workerStatsRef = useRef<Map<number, { tested: number; speed: number; currentPassword: string; total: number; elapsedMs: number }>>(new Map());
 
   /** Store the PDF file's ArrayBuffer for later use by the worker */
   const loadPDF = useCallback((file: File): Promise<void> => {
@@ -50,11 +52,12 @@ export function usePDFRecovery() {
 
   /** Terminate any running worker and reset state */
   const stop = useCallback(() => {
-    if (workerRef.current) {
-      workerRef.current.postMessage({ type: 'STOP' });
-      workerRef.current.terminate();
-      workerRef.current = null;
-    }
+    workersRef.current.forEach(worker => {
+      worker.postMessage({ type: 'STOP' });
+      worker.terminate();
+    });
+    workersRef.current = [];
+    workerStatsRef.current.clear();
     setState(prev =>
       prev.status === 'running' ? { ...prev, status: 'idle' } : prev
     );
@@ -71,83 +74,128 @@ export function usePDFRecovery() {
       return;
     }
 
-    // Terminate any previous worker before spawning a new one
+    // Terminate any previous workers before spawning new ones
     stop();
 
     const tokens = parsePattern(config.pattern);
+    const numWorkers = navigator.hardwareConcurrency || 4;
+    workerStatsRef.current.clear();
+    let exhaustedCount = 0;
+    
+    const forwardWorkers = Math.ceil(numWorkers / 2);
+    const reverseWorkers = Math.floor(numWorkers / 2);
 
-    // Vite-native Web Worker import
-    const worker = new Worker(
-      new URL('../workers/recovery.worker.ts', import.meta.url),
-      { type: 'module' }
-    );
+    for (let i = 0; i < numWorkers; i++) {
+      // Vite-native Web Worker import
+      const worker = new Worker(
+        new URL('../workers/recovery.worker.ts', import.meta.url),
+        { type: 'module' }
+      );
 
-    worker.onmessage = (event: MessageEvent<WorkerOutMessage>) => {
-      const msg = event.data;
-      switch (msg.type) {
-        case 'PROGRESS':
-          setState({
-            status: 'running',
-            currentPassword: msg.current,
-            tested: msg.tested,
-            total: msg.total,
-            speed: msg.speed,
-            elapsedMs: msg.elapsedMs,
-            foundPassword: null,
-            errorMessage: null,
-          });
-          break;
-        case 'FOUND':
-          setState(prev => ({
-            ...prev,
-            status: 'found',
-            foundPassword: msg.password,
-          }));
-          worker.terminate();
-          workerRef.current = null;
-          break;
-        case 'EXHAUSTED':
-          setState(prev => ({ ...prev, status: 'exhausted', tested: prev.total }));
-          worker.terminate();
-          workerRef.current = null;
-          break;
-        case 'ERROR':
-          setState(prev => ({
-            ...prev,
-            status: 'error',
-            errorMessage: msg.message,
-          }));
-          worker.terminate();
-          workerRef.current = null;
-          break;
-      }
-    };
+      worker.onmessage = (event: MessageEvent<WorkerOutMessage>) => {
+        const msg = event.data;
+        switch (msg.type) {
+          case 'PROGRESS': {
+            workerStatsRef.current.set(i, {
+              tested: msg.tested,
+              speed: msg.speed,
+              currentPassword: msg.current,
+              total: msg.total,
+              elapsedMs: msg.elapsedMs
+            });
 
-    worker.onerror = err => {
-      setState(prev => ({
-        ...prev,
-        status: 'error',
-        errorMessage: err.message,
-      }));
-      worker.terminate();
-      workerRef.current = null;
-    };
+            let totalTested = 0;
+            let totalSpeed = 0;
+            let currentPwd = msg.current;
+            let maxElapsed = 0;
 
-    workerRef.current = worker;
+            workerStatsRef.current.forEach(stats => {
+              totalTested += stats.tested;
+              totalSpeed += stats.speed;
+              maxElapsed = Math.max(maxElapsed, stats.elapsedMs);
+            });
 
-    // Transfer pdfBuffer to worker (zero-copy) — keeps main thread memory free
-    const bufferCopy = pdfBufferRef.current.slice(0);
-    const startMsg: WorkerStartMessage = {
-      type: 'START',
-      pdfBuffer: bufferCopy,
-      tokens,
-      knownChars: config.knownChars,
-    };
-    worker.postMessage(startMsg, [bufferCopy]);
+            setState(prev => ({
+              ...prev,
+              status: 'running',
+              currentPassword: currentPwd,
+              tested: totalTested,
+              total: msg.total,
+              speed: totalSpeed,
+              elapsedMs: maxElapsed,
+              foundPassword: null,
+              errorMessage: null,
+            }));
+            break;
+          }
+          case 'FOUND':
+            setState(prev => ({
+              ...prev,
+              status: 'found',
+              foundPassword: msg.password,
+            }));
+            workersRef.current.forEach(w => w.terminate());
+            workersRef.current = [];
+            break;
+          case 'EXHAUSTED':
+            exhaustedCount++;
+            if (exhaustedCount === numWorkers) {
+              setState(prev => ({ ...prev, status: 'exhausted', tested: prev.total }));
+              workersRef.current.forEach(w => w.terminate());
+              workersRef.current = [];
+            }
+            break;
+          case 'ERROR':
+            setState(prev => ({
+              ...prev,
+              status: 'error',
+              errorMessage: msg.message,
+            }));
+            workersRef.current.forEach(w => w.terminate());
+            workersRef.current = [];
+            break;
+        }
+      };
+
+      worker.onerror = err => {
+        setState(prev => ({
+          ...prev,
+          status: 'error',
+          errorMessage: err.message,
+        }));
+        workersRef.current.forEach(w => w.terminate());
+        workersRef.current = [];
+      };
+
+      workersRef.current.push(worker);
+
+      // Transfer pdfBuffer to worker (zero-copy) — keeps main thread memory free
+      // Note: slice(0) copies the buffer so each worker gets its own ArrayBuffer.
+      const bufferCopy = pdfBufferRef.current.slice(0);
+      
+      const direction = i < forwardWorkers ? 'forward' : 'reverse';
+      const strideId = i < forwardWorkers ? i : i - forwardWorkers;
+      const strideCount = direction === 'forward' ? forwardWorkers : reverseWorkers;
+
+      const isBidirectional = reverseWorkers > 0;
+
+      const startMsg: WorkerStartMessage = {
+        type: 'START',
+        pdfBuffer: bufferCopy,
+        tokens,
+        knownChars: config.knownChars,
+        direction,
+        strideId,
+        strideCount,
+        isBidirectional
+      };
+      worker.postMessage(startMsg, [bufferCopy]);
+    }
 
     setState({
       ...INITIAL_STATE,
       status: 'running',
+      activeWorkers: numWorkers,
     });
   }, [stop]);
 
