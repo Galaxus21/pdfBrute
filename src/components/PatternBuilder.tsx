@@ -49,9 +49,8 @@ export const PatternBuilder: React.FC<PatternBuilderProps> = ({
     <div className={css(utils.flexColumn, styles.wrapper)}>
       {/* Input */}
       <div className={css(utils.flexColumn, styles.inputGroup)}>
-        <label htmlFor="pattern-input" className={css(styles.label)}>Pattern Mask</label>
         <p className={css(styles.helperText)}>
-          Construct a mask that matches your likely password format using the symbols below.
+          Construct a pattern that matches your likely password format using the symbols below.
         </p>
         <input
           id="pattern-input"
@@ -205,7 +204,8 @@ const getStyles = (theme: ThemeTokens) => ({
     color: theme.colors.onSurfaceVariant,
     width: '100%',
     marginBottom: '8px',
-    marginLeft: '4px',
+    marginLeft: 0,
+    textAlign: 'center',
   },
   legendItem: {
     gap: '4px',
