@@ -17,11 +17,11 @@ import { GeneratorSettings } from '../components/GeneratorSettings';
 import { RecoveryProgress } from '../components/ProgressBar';
 import { ResultCard } from '../components/ResultCard';
 
-// Layout Components
 import { Header } from '../components/layout/Header';
 import { SectionCard } from '../components/layout/SectionCard';
 import { ActionArea } from '../components/layout/ActionArea';
 import { SystemIdle } from '../components/layout/SystemIdle';
+import { WelcomeGuide } from '../components/layout/WelcomeGuide';
 
 import { estimateCombinations, validatePattern } from '../utils/validators';
 import { getPatternLength } from '../utils/patterns';
@@ -101,9 +101,11 @@ export const Home: React.FC<HomeProps> = ({ theme, toggleTheme }) => {
       <Header theme={theme} toggleTheme={toggleTheme} />
 
       <main className={css(utils.flexColumn, styles.main)}>
+        <WelcomeGuide />
+
         <div className={css(utils.grid, styles.grid)}>
           <div className={css(utils.flexColumn, styles.leftCol)}>
-            <SectionCard title="1. TARGET FILE">
+            <SectionCard title="1. Upload Locked PDF">
               <UploadPDF
                 onFileLoaded={handleFileLoaded}
                 onFileRemoved={handleFileRemoved}
@@ -111,16 +113,16 @@ export const Home: React.FC<HomeProps> = ({ theme, toggleTheme }) => {
               />
             </SectionCard>
 
-            <SectionCard title="2. PATTERN DEFINITION">
+            <SectionCard title="2. Password Format">
               <PatternBuilder
                 value={config.pattern}
                 onChange={handlePatternChange}
-                disabled={isRunning}
+                disabled={isRunning || !pdfLoaded}
               />
               <GeneratorSettings
                 config={config}
                 onChange={handleConfigChange}
-                disabled={isRunning}
+                disabled={isRunning || !pdfLoaded}
               />
               {/* Validation errors */}
               {patternError && config.pattern && (
@@ -137,7 +139,11 @@ export const Home: React.FC<HomeProps> = ({ theme, toggleTheme }) => {
           </div>
 
           {/* Right Column: Status & Execution Console */}
-          <div className={css(utils.flexColumn, styles.rightCol)}>
+          <div className={css(
+            utils.flexColumn, 
+            styles.rightCol,
+            (isRunning || isDone || state.status === 'error') && styles.rightColTopOnMobile
+          )}>
             {state.status === 'idle' && (
               <SystemIdle estimatedCombinations={estimatedCombinations} />
             )}
@@ -190,4 +196,9 @@ const getStyles = (theme: ThemeTokens) => ({
     [tabletView]: { gridColumn: 'span 1 / span 1' },
     minWidth: 0,
   },
+  rightColTopOnMobile: {
+    [tabletView]: {
+      order: -1,
+    }
+  }
 });

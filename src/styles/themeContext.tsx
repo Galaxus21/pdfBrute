@@ -19,12 +19,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const saved = localStorage.getItem('pdfbrute-theme') as 'light' | 'dark' | null;
     if (saved) return saved;
 
-    // 2. Check OS/System preference
-    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return 'dark';
-    }
-
-    // 3. Fallback to default
+    // 2. Default to light theme
     return 'light';
   });
 

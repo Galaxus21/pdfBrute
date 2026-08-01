@@ -37,7 +37,10 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme }) => {
           <span className={css(styles.logoIcon)}>lock_open</span>
           <div>
             <h1 className={css(styles.title)}>PDFBrute</h1>
-            <p className={css(styles.subtitle)}>PDF Password Recovery · Client-side only · Your file never leaves this browser</p>
+            <p className={css(styles.subtitle)}>
+              PDF Password Recovery
+              <span className={css(styles.desktopOnlyText)}> · Client-side only · Your file never leaves this browser</span>
+            </p>
           </div>
         </div>
         <div className={css(utils.flexRow, utils.alignItemsCenter, styles.headerRight)}>
@@ -100,6 +103,11 @@ const getStyles = (theme: ThemeTokens) => ({
   subtitle: {
     ...getLabelCapsStyle(theme),
     marginTop: 4,
+  },
+  desktopOnlyText: {
+    [mobileView]: {
+      display: 'none',
+    },
   },
   headerRight: {
     gap: theme.spacing.gutterSm,

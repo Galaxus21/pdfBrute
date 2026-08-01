@@ -18,10 +18,9 @@ interface PatternBuilderProps {
 }
 
 const QUICK_EXAMPLES = [
-  { label: 'Name + Date', pattern: 'LLLLDDMM', desc: 'e.g. JOHN1508' },
-  { label: 'Phone/Account', pattern: 'dddddddddd', desc: '10 digits' },
-  { label: 'Name + Year', pattern: 'LLLLYYYY', desc: 'e.g. JOHN1990' },
-  { label: 'Custom Mix', pattern: 'LL??dd', desc: 'e.g. AB!@12' },
+  { label: '4-digit PIN', pattern: 'dddd', desc: 'e.g. 1234 — a 4-digit numeric code' },
+  { label: 'Date of Birth', pattern: 'DDMMYYYY', desc: 'e.g. 15081990 — Day, Month, Year' },
+  { label: 'Name + Year', pattern: 'LLLLYYYY', desc: 'e.g. JOHN1990 — 4 letters + Year (1900-2100)' },
 ];
 
 export const PatternBuilder: React.FC<PatternBuilderProps> = ({
