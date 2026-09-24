@@ -12,7 +12,6 @@
   "dependencies": {
     "antd": "^6.5.1",
     "aphrodite": "^2.4.0",
-    "firebase": "^12.16.0",
     "pdfjs-dist": "^6.1.200",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"

@@ -1,12 +1,8 @@
-/**
- * PatternBuilder.tsx
- * SRP: Handles pattern input, preview, and symbol legend display only.
- */
 import React, { useMemo } from 'react';
 import { Tooltip } from 'antd';
 import { css } from 'aphrodite';
 import { patternPreview } from '../utils/patterns';
-import { type ThemeTokens, getTokenColors, getLabelCapsStyle } from '../styles/theme';
+import { type ThemeTokens, getTokenColors, getLabelCapsStyle, getDisabledStyle } from '../styles/theme';
 import { useTheme } from '../styles/themeContext';
 import { useThemeStyles } from '../hooks/useThemeStyles';
 import { utils, mobileView } from '../styles/utilities';
@@ -20,7 +16,7 @@ interface PatternBuilderProps {
 const QUICK_EXAMPLES = [
   { label: '4-digit PIN', pattern: 'dddd', desc: 'e.g. 1234 — a 4-digit numeric code' },
   { label: 'Date of Birth', pattern: 'DDMMYYYY', desc: 'e.g. 15081990 — Day, Month, Year' },
-  { label: 'Name + Year', pattern: 'LLLLYYYY', desc: 'e.g. JOHN1990 — 4 letters + Year (1900-2100)' },
+  { label: 'Name + Year', pattern: 'LLLLYYYY', desc: 'e.g. JOHN1990 — 4 letters + Year (default range 1900-2100, adjustable below)' },
 ];
 
 export const PatternBuilder: React.FC<PatternBuilderProps> = ({
@@ -40,8 +36,8 @@ export const PatternBuilder: React.FC<PatternBuilderProps> = ({
       { symbol: 'd', meaning: 'Digit (0-9)', color: tokenColors.digit, example: 'e.g. 0, 1, … 9' },
       { symbol: 'DD', meaning: 'Day (01-31)', color: tokenColors.day, example: 'e.g. 01, 15, 31' },
       { symbol: 'MM', meaning: 'Month (01-12)', color: tokenColors.month, example: 'e.g. 01, 06, 12' },
-      { symbol: 'YYYY', meaning: 'Year', color: tokenColors.year, example: 'e.g. 1990, 2005, 2024\n(Range: 1900-2100)' },
-      { symbol: '?', meaning: 'Special Char', color: tokenColors.any, example: 'e.g. !, @, A, 3, … (all printable)' },
+      { symbol: 'YYYY', meaning: 'Year', color: tokenColors.year, example: 'e.g. 1990, 2005, 2024\n(default range 1900-2100, adjustable under Advanced)' },
+      { symbol: '?', meaning: 'Special Char', color: tokenColors.any, example: 'e.g. !, @, A, 3, … (printable ASCII only)' },
     ];
   }, [theme]);
 
@@ -149,10 +145,7 @@ const getStyles = (theme: ThemeTokens) => ({
       backgroundColor: theme.colors.surfaceContainerLow,
       borderColor: theme.colors.primary,
     },
-    ':disabled': {
-      opacity: 0.5,
-      cursor: 'not-allowed',
-    },
+    ...getDisabledStyle(),
   },
   inputGroup: {
     gap: '4px',
@@ -173,8 +166,8 @@ const getStyles = (theme: ThemeTokens) => ({
     color: theme.colors.onSurface,
     fontFamily: theme.typography.fontMono,
     fontSize: theme.typography.sizes.bodyMd,
-    borderRadius: theme.shape.radiusInput, // rounded-full
-    padding: `${theme.spacing.gutterSm} 24px`, // px-6
+    borderRadius: theme.shape.radiusInput,
+    padding: `${theme.spacing.gutterSm} 24px`,
     width: '100%',
     transition: 'all 0.2s',
     outline: 'none',
@@ -183,16 +176,13 @@ const getStyles = (theme: ThemeTokens) => ({
     },
     ':focus': {
       borderColor: theme.colors.primary,
-      boxShadow: `0 0 0 1px ${theme.colors.primary}`, // ring-1 ring-primary
+      boxShadow: `0 0 0 1px ${theme.colors.primary}`,
     },
-    ':disabled': {
-      opacity: 0.5,
-      cursor: 'not-allowed',
-    },
+    ...getDisabledStyle(),
   },
   legend: {
     backgroundColor: theme.colors.surfaceContainerLowest,
-    borderRadius: theme.shape.radiusCard, // rounded-3xl
+    borderRadius: theme.shape.radiusCard,
     padding: theme.spacing.unit,
     border: `1px solid ${theme.colors.outlineVariant}`,
     gap: '4px',

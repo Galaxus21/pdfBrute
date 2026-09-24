@@ -6,19 +6,17 @@
  * ISP: the interface is minimal — generators only implement what they need.
  */
 export interface PatternToken {
-  type: TokenType;
+  type: 'UPPER' | 'LOWER' | 'DIGIT' | 'DAY' | 'MONTH' | 'YEAR' | 'ANY' | 'INVALID';
   literal?: string;
 }
 
-type TokenType =
-  | 'UPPER'    // L  — uppercase letter A-Z
-  | 'LOWER'    // l  — lowercase letter a-z
-  | 'DIGIT'    // d  — digit 0-9
-  | 'DAY'      // DD — two-digit day 01-31
-  | 'MONTH'    // MM — two-digit month 01-12
-  | 'YEAR'     // YYYY — four-digit year
-  | 'ANY'      // ?  — any printable character
-  | 'INVALID';
+// 'UPPER'    L  — uppercase letter A-Z
+// 'LOWER'    l  — lowercase letter a-z
+// 'DIGIT'    d  — digit 0-9
+// 'DAY'      DD — two-digit day 01-31
+// 'MONTH'    MM — two-digit month 01-12
+// 'YEAR'     YYYY — four-digit year
+// 'ANY'      ?  — any printable ASCII character (0x20-0x7E)
 
 // ─── Generator Strategy (ISP / OCP compliant) ────────────────────────────────
 
@@ -34,67 +32,50 @@ export interface GeneratorStrategy {
   values(): IterableIterator<string>;
 }
 
+/**
+ * Inclusive bounds for the YYYY token. Reused across the generator layer,
+ * the validation layer, and the worker START message so all three can never
+ * disagree about what "year" means for a given run.
+ */
+export interface YearRange {
+  from: number;
+  to: number;
+}
+
 // ─── Worker Messages ──────────────────────────────────────────────────────────
 
-export interface WorkerStartMessage {
-  type: 'START';
-  pdfBuffer: ArrayBuffer;
-  tokens: PatternToken[];
-  knownChars: string[];
-  direction: 'forward' | 'reverse';
-  strideId: number;
-  strideCount: number;
-  isBidirectional: boolean;
-}
+/**
+ * Sent to exactly one worker before any START — confirms the PDF actually
+ * needs a password. Kept separate from START so the whole pool doesn't
+ * redundantly re-parse the file (see recoveryWorkerPool.ts).
+ */
 
-interface WorkerStopMessage {
-  type: 'STOP';
-}
-
-export type WorkerInMessage = WorkerStartMessage | WorkerStopMessage;
-
+export type WorkerInMessage =
+  | { type: 'CHECK'; pdfUrl: string }
+  | { type: 'START'; pdfUrl: string; tokens: PatternToken[]; knownChars: string[]; yearRange: YearRange; workerIndex: number; workerCount: number }
+  | { type: 'STOP' };
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface WorkerProgressMessage {
+export type WorkerProgressMessage = {
   type: 'PROGRESS';
   current: string;
   tested: number;
   total: number;
   speed: number; // passwords per second
   elapsedMs: number;
-}
-
-interface WorkerFoundMessage {
-  type: 'FOUND';
-  password: string;
-}
-
-interface WorkerExhaustedMessage {
-  type: 'EXHAUSTED';
-}
-
-interface WorkerErrorMessage {
-  type: 'ERROR';
-  message: string;
-}
+};
 
 export type WorkerOutMessage =
+  | { type: 'CHECK_RESULT'; isUnencrypted: boolean }
   | WorkerProgressMessage
-  | WorkerFoundMessage
-  | WorkerExhaustedMessage
-  | WorkerErrorMessage;
+  | { type: 'FOUND'; password: string }
+  | { type: 'EXHAUSTED' }
+  | { type: 'ERROR'; message: string };
 
 // ─── App State ────────────────────────────────────────────────────────────────
 
-type RecoveryStatus =
-  | 'idle'
-  | 'running'
-  | 'found'
-  | 'exhausted'
-  | 'error';
-
 export interface RecoveryState {
-  status: RecoveryStatus;
+  status: 'idle' | 'running' | 'found' | 'exhausted' | 'error';
   currentPassword: string;
   tested: number;
   total: number;
@@ -109,4 +90,5 @@ export interface PatternConfig {
   pattern: string;
   passwordLength: number;
   knownChars: string[];
+  yearRange: YearRange;
 }

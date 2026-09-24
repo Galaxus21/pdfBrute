@@ -1,13 +1,14 @@
-/**
- * GeneratorSettings.tsx
- * SRP: Handles known-info positional character overrides using simple inputs.
- */
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { css } from 'aphrodite';
 import type { PatternConfig } from '../types';
 import { useThemeStyles } from '../hooks/useThemeStyles';
-import { type ThemeTokens, getCardStyle } from '../styles/theme';
+import { type ThemeTokens, getCardStyle, getDisabledStyle } from '../styles/theme';
 import { utils } from '../styles/utilities';
+import { parsePattern } from '../utils/patterns';
+
+// A YYYY token always renders as 4 digits, so bound inputs to that range.
+const MIN_YEAR = 0;
+const MAX_YEAR = 9999;
 
 interface GeneratorSettingsProps {
   config: PatternConfig;
@@ -15,16 +16,28 @@ interface GeneratorSettingsProps {
   disabled?: boolean;
 }
 
+function clampYear(rawValue: string, fallback: number): number {
+  if (rawValue === '') return 0;
+  const parsed = Number.parseInt(rawValue, 10);
+  if (Number.isNaN(parsed)) return fallback;
+  return Math.min(MAX_YEAR, Math.max(MIN_YEAR, parsed));
+}
+
 export const GeneratorSettings: React.FC<GeneratorSettingsProps> = ({
   config,
   onChange,
   disabled,
 }) => {
-  const { passwordLength, knownChars } = config;
+  const { passwordLength, knownChars, yearRange } = config;
   const inputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const styles = useThemeStyles(getStyles);
+
+  const hasYearToken = useMemo(
+    () => parsePattern(config.pattern).some(t => t.type === 'YEAR'),
+    [config.pattern]
+  );
 
   if (passwordLength === 0) return null;
 
@@ -87,6 +100,50 @@ export const GeneratorSettings: React.FC<GeneratorSettingsProps> = ({
           <p className={css(styles.exampleText)}>
             <strong>Example:</strong> If you know the 3rd character is <strong>A</strong>, type <strong>A</strong> into box 3.
           </p>
+
+          {hasYearToken && (
+            <div className={css(styles.yearSection)}>
+              <label className={css(styles.label)}>YYYY year range</label>
+              <p className={css(styles.helperText)}>
+                Narrow the years YYYY will try. Defaults to 1900–2100.
+              </p>
+              <div className={css(utils.flexRow, utils.alignItemsCenter, styles.yearRow)}>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={yearRange.from === 0 ? '' : yearRange.from}
+                  onChange={e => onChange({ yearRange: { ...yearRange, from: clampYear(e.target.value, yearRange.from) } })}
+                  onBlur={() => {
+                    if (yearRange.from === 0) {
+                      onChange({ yearRange: { ...yearRange, from: 1900 } });
+                    }
+                  }}
+                  disabled={disabled}
+                  min={MIN_YEAR}
+                  max={MAX_YEAR}
+                  className={css(styles.yearInput)}
+                  aria-label="Year range start"
+                />
+                <span className={css(styles.yearSeparator)}>to</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={yearRange.to === 0 ? '' : yearRange.to}
+                  onChange={e => onChange({ yearRange: { ...yearRange, to: clampYear(e.target.value, yearRange.to) } })}
+                  onBlur={() => {
+                    if (yearRange.to === 0) {
+                      onChange({ yearRange: { ...yearRange, to: 2100 } });
+                    }
+                  }}
+                  disabled={disabled}
+                  min={MIN_YEAR}
+                  max={MAX_YEAR}
+                  className={css(styles.yearInput)}
+                  aria-label="Year range end"
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -117,10 +174,7 @@ const getStyles = (theme: ThemeTokens) => ({
     ':hover': {
       backgroundColor: theme.colors.surfaceContainerLow,
     },
-    ':disabled': {
-      opacity: 0.5,
-      cursor: 'not-allowed',
-    },
+    ...getDisabledStyle(),
   },
   optionalBadge: {
     fontFamily: theme.typography.fontMono,
@@ -188,9 +242,38 @@ const getStyles = (theme: ThemeTokens) => ({
       borderColor: theme.colors.primary,
       boxShadow: `0 0 0 1px ${theme.colors.primary}`,
     },
-    ':disabled': {
-      opacity: 0.5,
-      cursor: 'not-allowed',
+    ...getDisabledStyle(),
+  },
+  yearSection: {
+    marginTop: theme.spacing.gutterSm,
+    paddingTop: theme.spacing.gutterSm,
+    borderTop: `1px solid ${theme.colors.outlineVariant}`,
+  },
+  yearRow: {
+    gap: '10px',
+    marginTop: '4px',
+  },
+  yearSeparator: {
+    fontFamily: theme.typography.fontMono,
+    fontSize: '13px',
+    color: theme.colors.onSurfaceVariant,
+  },
+  yearInput: {
+    width: '84px',
+    height: '40px',
+    backgroundColor: theme.colors.surfaceContainerLowest,
+    border: `1px solid ${theme.colors.outlineVariant}`,
+    textAlign: 'center' as const,
+    color: theme.colors.onSurface,
+    fontFamily: theme.typography.fontMono,
+    fontSize: theme.typography.sizes.bodyMd,
+    borderRadius: theme.shape.radiusIconBox,
+    transition: 'all 0.2s',
+    outline: 'none',
+    ':focus': {
+      borderColor: theme.colors.primary,
+      boxShadow: `0 0 0 1px ${theme.colors.primary}`,
     },
+    ...getDisabledStyle(),
   },
 });

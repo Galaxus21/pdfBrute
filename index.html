@@ -9,9 +9,9 @@
   <!-- Primary SEO -->
   <title>PDFBrute — PDF Password Recovery (Client-Side, Multi-Core)</title>
   <meta name="description"
-    content="Recover access to your encrypted PDFs instantly with PDFBrute. Uses multi-core Web Workers and bidirectional search for blazing fast, 100% private client-side processing." />
+    content="Recover access to your encrypted PDFs instantly with PDFBrute. Uses multi-core Web Workers and contiguous range partitioning for blazing fast, 100% private client-side processing." />
   <meta name="keywords"
-    content="PDF password recovery, PDF unlock, client-side PDF, PDF brute force, multi-core PDF cracker, web workers, bidirectional search, private PDF tool, on device, no install, offline PDF unlock, secure PDF unlocker, hardware accelerated" />
+    content="PDF password recovery, PDF unlock, client-side PDF, PDF brute force, multi-core PDF cracker, web workers, range partitioning, private PDF tool, on device, no install, offline PDF unlock, secure PDF unlocker, hardware accelerated" />
   <meta name="author" content="PDFBrute" />
   <meta name="robots" content="index, follow" />
 
@@ -47,7 +47,7 @@
         "@type": "SoftwareApplication",
         "name": "PDFBrute",
         "url": "https://pdfbrute.web.app/",
-        "description": "Client-side PDF password recovery tool. Recover access to your encrypted PDFs on-device using custom password patterns. Uses multi-core Web Workers and bidirectional search for blazing fast parallel processing.",
+        "description": "Client-side PDF password recovery tool. Recover access to your encrypted PDFs on-device using custom password patterns. Uses multi-core Web Workers and contiguous range partitioning for blazing fast parallel processing.",
         "applicationCategory": "UtilitiesApplication",
         "operatingSystem": "Any (Browser-based)",
         "offers": {
@@ -58,7 +58,7 @@
         "featureList": [
           "100% client-side processing",
           "Multi-core Web Worker parallelization",
-          "Bidirectional search algorithm",
+          "Parallel range partitioning algorithm",
           "File never leaves the browser"
         ]
       },
@@ -98,6 +98,25 @@
       padding: 0;
     }
 
+    /*
+     * Light-theme defaults — must mirror `lightTheme.colors` in
+     * src/styles/theme.ts. Painted before the app bundle loads, so the
+     * first frame already matches the real theme instead of flashing
+     * browser defaults (black text on a transparent background).
+     */
+    :root {
+      --color-background: #ffffff;
+      --color-on-surface: #10232A;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    /* Dark-theme override — must mirror `darkTheme.colors` in theme.ts. */
+    :root[data-theme='dark'] {
+      --color-background: #131313;
+      --color-on-surface: #e5e2e1;
+      --font-body: 'Manrope', sans-serif;
+    }
+
     body {
       background-color: var(--color-background);
       color: var(--color-on-surface);
@@ -105,6 +124,24 @@
       -webkit-font-smoothing: antialiased;
     }
   </style>
+
+  <script>
+    // Blocking (non-module) script: sets data-theme before first paint, so
+    // a returning dark-mode visitor never sees a light-theme flash. The
+    // deferred `src/main.tsx` module can't run early enough to prevent
+    // this itself — see ThemeProvider in src/styles/themeContext.tsx for
+    // the same lookup, used to initialize React's own theme state.
+    (function () {
+      try {
+        var saved = localStorage.getItem('pdfbrute-theme');
+        if (saved === 'dark') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      } catch (e) {
+        // localStorage unavailable (e.g. blocked storage) — fall back to light.
+      }
+    })();
+  </script>
 </head>
 
 <body>
@@ -113,14 +150,14 @@
     <main style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;">
       <header>
         <h1>PDFBrute — PDF Password Recovery</h1>
-        <p><strong>What is PDFBrute?</strong> PDFBrute is a highly secure, client-side tool to recover access to your encrypted PDFs on-device using custom password patterns. It uses multi-core Web Workers and a bidirectional search algorithm for blazing fast performance. 100% private, no install required, and your file never leaves your browser.</p>
+        <p><strong>What is PDFBrute?</strong> PDFBrute is a highly secure, client-side tool to recover access to your encrypted PDFs on-device using custom password patterns. It uses multi-core Web Workers and parallel range partitioning for blazing fast performance. 100% private, no install required, and your file never leaves your browser.</p>
       </header>
       <section>
         <h2>Key Features</h2>
         <ul>
           <li><strong>100% Privacy:</strong> Files are processed locally on your device.</li>
           <li><strong>Multi-Core Parallelization:</strong> Uses all available CPU cores via Web Workers.</li>
-          <li><strong>Bidirectional Search:</strong> Cuts worst-case search times in half by squeezing the search space.</li>
+          <li><strong>Parallel Partitioning:</strong> Distributes contiguous combination slices across all CPU cores.</li>
           <li><strong>No Install:</strong> Pure web application accessible from any modern browser.</li>
         </ul>
       </section>

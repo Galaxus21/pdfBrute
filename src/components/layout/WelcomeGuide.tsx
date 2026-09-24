@@ -1,13 +1,36 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { css } from 'aphrodite';
 import { type ThemeTokens, getCardStyle } from '../../styles/theme';
 import { useTheme } from '../../styles/themeContext';
 import { useThemeStyles } from '../../hooks/useThemeStyles';
 import { utils, mobileView } from '../../styles/utilities';
 
+// Persisted so a visitor who dismisses this doesn't see it again next
+// session — unlike hiding it based on upload state, this also spares a
+// returning user who dismisses it before ever uploading a file.
+const WELCOME_DISMISSED_KEY = 'pdfbrute-welcome-dismissed';
+
+function readDismissed(): boolean {
+  try {
+    return localStorage.getItem(WELCOME_DISMISSED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 export const WelcomeGuide: React.FC = () => {
   const styles = useThemeStyles(getStyles);
   const { theme } = useTheme();
+  const [dismissed, setDismissed] = useState(readDismissed);
+
+  const handleDismiss = () => {
+    setDismissed(true);
+    try {
+      localStorage.setItem(WELCOME_DISMISSED_KEY, 'true');
+    } catch {
+      // Storage unavailable (e.g. blocked) — dismissal just won't persist across reloads.
+    }
+  };
 
   const steps = [
     {
@@ -30,18 +53,28 @@ export const WelcomeGuide: React.FC = () => {
     },
   ];
 
+  if (dismissed) return null;
+
   return (
     <div className={css(utils.flexColumn, styles.container)}>
       <div className={css(utils.flexRow, utils.alignItemsCenter, styles.header)}>
         <span className="material-symbols-outlined" style={{ fontSize: 24, color: theme.colors.primary }}>
           verified_user
         </span>
-        <div>
+        <div className={css(styles.headerText)}>
           <h2 className={css(styles.title)}>Welcome to PDFBrute!</h2>
           <p className={css(styles.subtitle)}>
             To get started, upload your password-protected PDF. Your file is processed entirely in your browser and is <strong>never uploaded</strong> to any server.
           </p>
         </div>
+        <button
+          type="button"
+          aria-label="Dismiss welcome guide"
+          className={css(styles.dismissBtn)}
+          onClick={handleDismiss}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+        </button>
       </div>
 
       <div className={css(utils.flexRow, styles.stepsGrid)}>
@@ -71,6 +104,23 @@ const getStyles = (theme: ThemeTokens) => ({
   },
   header: {
     gap: '12px',
+  },
+  headerText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  dismissBtn: {
+    background: theme.colors.surfaceContainer,
+    border: 'none',
+    borderRadius: '9999px',
+    padding: '6px',
+    cursor: 'pointer',
+    color: theme.colors.secondary,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    alignSelf: 'flex-start' as const,
   },
   title: {
     fontFamily: theme.typography.fontBody,

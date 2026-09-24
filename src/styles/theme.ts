@@ -118,7 +118,10 @@ export const lightTheme: ThemeTokens = {
     surfaceContainerHigh: '#e8e8e8',
     onSurface: '#10232A',
     onSurfaceVariant: '#42474e',
-    primary: '#b58863',
+    // Darkened from #b58863 — that shade only reached ~3.15:1 contrast
+    // against white button text (WCAG AA needs 4.5:1 for 16px/600-weight
+    // text). Same hue/chroma, uniformly darker (~4.66:1 with onPrimary).
+    primary: '#916d4f',
     onPrimary: '#ffffff',
     secondary: '#3d4d55',
     secondaryContainer: '#c0d1d9',
@@ -229,3 +232,11 @@ export const getIconBoxStyle = (theme: ThemeTokens) => ({
   alignItems: 'center',
   justifyContent: 'center',
 });
+
+export const getDisabledStyle = () => ({
+  ':disabled': {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+  },
+});
+

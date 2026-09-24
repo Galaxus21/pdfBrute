@@ -4,7 +4,7 @@ import { Home } from './pages/Home';
 import { useTheme } from './styles/themeContext';
 
 const App: React.FC = () => {
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
 
   const antdTheme: ThemeConfig = {
     algorithm: theme.mode === 'dark' ? antdThemeAPI.darkAlgorithm : antdThemeAPI.defaultAlgorithm,
@@ -19,7 +19,7 @@ const App: React.FC = () => {
 
   return (
     <ConfigProvider theme={antdTheme}>
-      <Home theme={theme.mode} toggleTheme={toggleTheme} />
+      <Home />
     </ConfigProvider>
   );
 };

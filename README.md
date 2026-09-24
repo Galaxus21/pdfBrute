@@ -43,7 +43,7 @@ A **live preview** updates as you type, showing an example of what passwords you
 In the Advanced Settings panel, enter any characters you already know into their exact position slots. PDFBrute filters the search space at startup — only candidates matching your known characters are tested.
 
 ### High-Performance Web Workers
-The brute-force engine runs in a dedicated Web Worker, keeping the UI fully responsive. The recovery loop uses an **event-driven, non-cloning** architecture — the PDF buffer is loaded once, and `onPassword` is called for each candidate, avoiding memory-intensive re-allocation on every attempt.
+The brute-force engine runs across multi-core Web Workers using contiguous range partitioning, keeping the UI fully responsive. The recovery loop uses an **event-driven, non-cloning** architecture — the PDF buffer is loaded once, and `onPassword` is called for each candidate, avoiding memory-intensive re-allocation on every attempt.
 
 Live stats update every 250ms:
 - Passwords tested
@@ -71,7 +71,7 @@ Fully responsive UI with automatic light/dark mode based on your system preferen
 | [PDF.js](https://mozilla.github.io/pdf.js/) | Client-side PDF decryption |
 | [Ant Design](https://ant.design/) | UI component library |
 | [Aphrodite](https://github.com/Khan/aphrodite) | CSS-in-JS styling |
-| [Firebase](https://firebase.google.com/) | Hosting & Analytics |
+| [Firebase](https://firebase.google.com/) | Hosting |
 | Web Workers API | Background thread execution |
 
 ---
@@ -108,20 +108,40 @@ npm run build
 ```
 src/
 ├── components/
-│   ├── PatternBuilder.tsx      # Pattern mask input, symbol legend, live preview
-│   ├── GeneratorSettings.tsx   # Known character pinning (advanced panel)
-│   ├── UploadPDF.tsx           # PDF drag-and-drop / file input
-│   ├── ProgressBar.tsx         # Live recovery stats and progress display
-│   └── ResultCard.tsx          # Found/exhausted/error result display
+│   ├── layout/
+│   │   ├── ActionArea.tsx          # Start/stop recovery controls
+│   │   ├── Header.tsx              # App header, theme toggle, share
+│   │   ├── SectionCard.tsx         # Reusable titled card wrapper
+│   │   ├── SystemIdle.tsx          # Idle state with combination estimate
+│   │   └── WelcomeGuide.tsx        # Dismissible onboarding guide
+│   ├── GeneratorSettings.tsx       # Known character pinning, YYYY range
+│   ├── PatternBuilder.tsx          # Pattern mask input, symbol legend, preview
+│   ├── ProgressBar.tsx             # Live recovery stats and progress
+│   ├── ResultCard.tsx              # Found/exhausted/error result display
+│   └── UploadPDF.tsx               # PDF drag-and-drop / file input
+├── hooks/
+│   ├── usePDFRecovery.ts           # React state for recovery orchestration
+│   └── useThemeStyles.ts           # Theme-aware Aphrodite stylesheet hook
+├── pages/
+│   └── Home.tsx                    # Main page layout
 ├── workers/
-│   └── recovery.worker.ts      # Web Worker: brute-force engine
+│   ├── recovery.worker.ts          # Web Worker: brute-force engine
+│   └── recoveryWorkerPool.ts       # Worker lifecycle and message routing
 ├── utils/
-│   ├── generators.ts           # Generator strategies (Cartesian product engine)
-│   └── patterns.ts             # Pattern parsing and preview utilities
+│   ├── combinationLimits.ts        # Search space feasibility checks
+│   ├── generators.ts               # Generator strategies (Cartesian product)
+│   ├── patterns.ts                 # Pattern parsing and preview
+│   ├── pdfErrorMessages.ts         # PDF.js error code mapping
+│   ├── formatting.ts               # Number formatting (formatCount)
+│   └── validators.ts               # Pattern syntax validation
 ├── styles/
-│   ├── theme.ts                # Design system tokens (colors, typography, spacing)
-│   └── themeContext.tsx        # Light/dark theme context provider
-└── types/                      # Shared TypeScript types
+│   ├── theme.ts                    # Design tokens (colors, typography, spacing)
+│   ├── themeContext.tsx            # Light/dark theme context provider
+│   └── utilities.ts                # Shared Aphrodite utility classes
+├── types/
+│   └── index.ts                    # Shared TypeScript interfaces and unions
+├── App.tsx
+└── main.tsx
 ```
 
 ---

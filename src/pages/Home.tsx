@@ -3,7 +3,7 @@
  * SRP: Composes all feature components into a single page layout.
  * Owns no business logic — delegates to usePDFRecovery hook.
  */
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Alert } from 'antd';
 import { css } from 'aphrodite';
 import type { ThemeTokens } from '../styles/theme';
@@ -23,22 +23,20 @@ import { ActionArea } from '../components/layout/ActionArea';
 import { SystemIdle } from '../components/layout/SystemIdle';
 import { WelcomeGuide } from '../components/layout/WelcomeGuide';
 
-import { estimateCombinations, validatePattern } from '../utils/validators';
+import { validatePattern } from '../utils/validators';
+import { getCombinationsFeasibility } from '../utils/combinationLimits';
 import { getPatternLength } from '../utils/patterns';
+import { DEFAULT_YEAR_RANGE } from '../utils/generators';
 import type { PatternConfig } from '../types';
 
 const DEFAULT_CONFIG: PatternConfig = {
   pattern: '',
   passwordLength: 0,
   knownChars: [],
+  yearRange: DEFAULT_YEAR_RANGE,
 };
 
-interface HomeProps {
-  theme: string;
-  toggleTheme: () => void;
-}
-
-export const Home: React.FC<HomeProps> = ({ theme, toggleTheme }) => {
+export const Home: React.FC = () => {
   const styles = useThemeStyles(getStyles);
 
   const { state, loadPDF, start, stop, reset, clearResults, setError } = usePDFRecovery();
@@ -88,17 +86,19 @@ export const Home: React.FC<HomeProps> = ({ theme, toggleTheme }) => {
 
   // ─── Validation ─────────────────────────────────────────────────────────────
   const patternError = validatePattern(config.pattern);
-  const estimatedCombinations = patternError
+  const combinations = patternError
     ? null
-    : estimateCombinations(config.pattern, config.knownChars);
+    : getCombinationsFeasibility(config.pattern, config.knownChars, config.yearRange);
+  const estimatedCombinations = combinations?.count ?? null;
+  const combinationsError = combinations?.error ?? null;
 
   const isRunning = state.status === 'running';
   const isDone = state.status === 'found' || state.status === 'exhausted';
-  const canStart = pdfLoaded && !patternError && !isRunning;
+  const canStart = pdfLoaded && !patternError && !combinationsError && !isRunning;
 
   return (
     <div className={css(utils.flexColumn, styles.page)}>
-      <Header theme={theme} toggleTheme={toggleTheme} />
+      <Header />
 
       <main className={css(utils.flexColumn, styles.main)}>
         <WelcomeGuide />
@@ -128,6 +128,9 @@ export const Home: React.FC<HomeProps> = ({ theme, toggleTheme }) => {
               {patternError && config.pattern && (
                 <Alert type="error" title={patternError} showIcon style={{ borderRadius: 8, marginTop: 8 }} />
               )}
+              {!patternError && combinationsError && config.pattern && (
+                <Alert type="error" title={combinationsError} showIcon style={{ borderRadius: 8, marginTop: 8 }} />
+              )}
             </SectionCard>
 
             <ActionArea
@@ -140,7 +143,7 @@ export const Home: React.FC<HomeProps> = ({ theme, toggleTheme }) => {
 
           {/* Right Column: Status & Execution Console */}
           <div className={css(
-            utils.flexColumn, 
+            utils.flexColumn,
             styles.rightCol,
             (isRunning || isDone || state.status === 'error') && styles.rightColTopOnMobile
           )}>

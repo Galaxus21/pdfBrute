@@ -5,15 +5,11 @@ import { type ThemeTokens, getCardStyle } from '../../styles/theme';
 import { useTheme } from '../../styles/themeContext';
 import { useThemeStyles } from '../../hooks/useThemeStyles';
 import { utils } from '../../styles/utilities';
-import { formatCount } from '../../utils/validators';
+import { formatCount } from '../../utils/formatting';
 
 const { Text } = Typography;
 
-interface SystemIdleProps {
-  estimatedCombinations: number | null;
-}
-
-export const SystemIdle: React.FC<SystemIdleProps> = ({ estimatedCombinations }) => {
+export const SystemIdle: React.FC<{ estimatedCombinations: number | null }> = ({ estimatedCombinations }) => {
   const styles = useThemeStyles(getStyles);
   const { theme } = useTheme();
 

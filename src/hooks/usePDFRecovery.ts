@@ -1,19 +1,17 @@
 /**
- * usePDFRecovery.ts
- *
- * SRP: This hook owns the Web Worker lifecycle and recovery state only.
- *      It does not render anything.
- * DIP: Depends on WorkerInMessage / WorkerOutMessage abstractions.
+ * Manages recovery state and PDF object URL lifecycle.
  */
-
-import { useRef, useState, useCallback } from 'react';
-import type {
-  RecoveryState,
-  PatternConfig,
-  WorkerOutMessage,
-  WorkerStartMessage,
-} from '../types';
+import { useRef, useState, useCallback, useEffect } from 'react';
+import type { RecoveryState, PatternConfig, WorkerProgressMessage } from '../types';
 import { parsePattern } from '../utils/patterns';
+import { startRecoveryPool, getWorkerCount } from '../workers/recoveryWorkerPool';
+
+// A PDF always opens with this literal header — checked before we ever spin
+// up a worker, so a non-PDF upload fails fast with a clear message (F12).
+const PDF_MAGIC_BYTES = '%PDF-';
+
+const NOT_PASSWORD_PROTECTED_MESSAGE =
+  "This PDF doesn't require a password to open — there's no open password to recover.";
 
 // ─── Initial State (DRY: single source of truth) ─────────────────────────────
 
@@ -29,33 +27,43 @@ const INITIAL_STATE: RecoveryState = {
   activeWorkers: 0,
 };
 
+interface WorkerStats {
+  tested: number;
+  speed: number;
+  elapsedMs: number;
+}
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function usePDFRecovery() {
   const [state, setState] = useState<RecoveryState>(INITIAL_STATE);
   const workersRef = useRef<Worker[]>([]);
-  const pdfBufferRef = useRef<ArrayBuffer | null>(null);
-  const workerStatsRef = useRef<Map<number, { tested: number; speed: number; currentPassword: string; total: number; elapsedMs: number }>>(new Map());
+  const pdfUrlRef = useRef<string | null>(null);
+  const workerStatsRef = useRef<Map<number, WorkerStats>>(new Map());
 
-  /** Store the PDF file's ArrayBuffer for later use by the worker */
-  const loadPDF = useCallback((file: File): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = e => {
-        pdfBufferRef.current = e.target?.result as ArrayBuffer;
-        resolve();
-      };
-      reader.onerror = () => reject(new Error('Failed to read PDF file.'));
-      reader.readAsArrayBuffer(file);
-    });
+  const revokePdfUrl = useCallback(() => {
+    if (pdfUrlRef.current) {
+      URL.revokeObjectURL(pdfUrlRef.current);
+      pdfUrlRef.current = null;
+    }
   }, []);
 
-  /** Terminate any running worker and reset state */
+  // Belt-and-suspenders: also revoke if the component unmounts mid-session.
+  useEffect(() => () => revokePdfUrl(), [revokePdfUrl]);
+
+  /** Validates the file looks like a PDF and mints a blob: URL for the workers to load. */
+  const loadPDF = useCallback(async (file: File): Promise<void> => {
+    const header = await file.slice(0, PDF_MAGIC_BYTES.length).text();
+    if (header !== PDF_MAGIC_BYTES) {
+      throw new Error("This file doesn't look like a PDF (missing %PDF- header).");
+    }
+    revokePdfUrl();
+    pdfUrlRef.current = URL.createObjectURL(file);
+  }, [revokePdfUrl]);
+
+  /** Terminate any running workers and reset state */
   const stop = useCallback(() => {
-    workersRef.current.forEach(worker => {
-      worker.postMessage({ type: 'STOP' });
-      worker.terminate();
-    });
+    workersRef.current.forEach(worker => worker.terminate());
     workersRef.current = [];
     workerStatsRef.current.clear();
     setState(prev =>
@@ -63,14 +71,38 @@ export function usePDFRecovery() {
     );
   }, []);
 
+  const applyProgress = useCallback(
+    (workerIndex: number, msg: WorkerProgressMessage) => {
+      workerStatsRef.current.set(workerIndex, { tested: msg.tested, speed: msg.speed, elapsedMs: msg.elapsedMs });
+
+      let totalTested = 0;
+      let totalSpeed = 0;
+      let maxElapsed = 0;
+      workerStatsRef.current.forEach(stats => {
+        totalTested += stats.tested;
+        totalSpeed += stats.speed;
+        maxElapsed = Math.max(maxElapsed, stats.elapsedMs);
+      });
+
+      setState(prev => {
+        if (prev.status !== 'running') return prev;
+        return {
+          ...prev,
+          currentPassword: msg.current,
+          tested: totalTested,
+          total: msg.total,
+          speed: totalSpeed,
+          elapsedMs: maxElapsed,
+        };
+      });
+    },
+    []
+  );
+
   /** Start the recovery process */
   const start = useCallback((config: PatternConfig) => {
-    if (!pdfBufferRef.current) {
-      setState(prev => ({
-        ...prev,
-        status: 'error',
-        errorMessage: 'No PDF loaded.',
-      }));
+    if (!pdfUrlRef.current) {
+      setState(prev => ({ ...prev, status: 'error', errorMessage: 'No PDF loaded.' }));
       return;
     }
 
@@ -78,132 +110,32 @@ export function usePDFRecovery() {
     stop();
 
     const tokens = parsePattern(config.pattern);
-    const numWorkers = navigator.hardwareConcurrency || 4;
     workerStatsRef.current.clear();
-    let exhaustedCount = 0;
-    
-    const forwardWorkers = Math.ceil(numWorkers / 2);
-    const reverseWorkers = Math.floor(numWorkers / 2);
 
-    for (let i = 0; i < numWorkers; i++) {
-      // Vite-native Web Worker import
-      const worker = new Worker(
-        new URL('../workers/recovery.worker.ts', import.meta.url),
-        { type: 'module' }
-      );
-
-      worker.onmessage = (event: MessageEvent<WorkerOutMessage>) => {
-        const msg = event.data;
-        switch (msg.type) {
-          case 'PROGRESS': {
-            workerStatsRef.current.set(i, {
-              tested: msg.tested,
-              speed: msg.speed,
-              currentPassword: msg.current,
-              total: msg.total,
-              elapsedMs: msg.elapsedMs
-            });
-
-            let totalTested = 0;
-            let totalSpeed = 0;
-            const currentPwd = msg.current;
-            let maxElapsed = 0;
-
-            workerStatsRef.current.forEach(stats => {
-              totalTested += stats.tested;
-              totalSpeed += stats.speed;
-              maxElapsed = Math.max(maxElapsed, stats.elapsedMs);
-            });
-
-            setState(prev => ({
-              ...prev,
-              status: 'running',
-              currentPassword: currentPwd,
-              tested: totalTested,
-              total: msg.total,
-              speed: totalSpeed,
-              elapsedMs: maxElapsed,
-              foundPassword: null,
-              errorMessage: null,
-            }));
-            break;
-          }
-          case 'FOUND':
-            setState(prev => ({
-              ...prev,
-              status: 'found',
-              foundPassword: msg.password,
-            }));
-            workersRef.current.forEach(w => w.terminate());
-            workersRef.current = [];
-            break;
-          case 'EXHAUSTED':
-            exhaustedCount++;
-            if (exhaustedCount === numWorkers) {
-              setState(prev => ({ ...prev, status: 'exhausted', tested: prev.total }));
-              workersRef.current.forEach(w => w.terminate());
-              workersRef.current = [];
-            }
-            break;
-          case 'ERROR':
-            setState(prev => ({
-              ...prev,
-              status: 'error',
-              errorMessage: msg.message,
-            }));
-            workersRef.current.forEach(w => w.terminate());
-            workersRef.current = [];
-            break;
-        }
-      };
-
-      worker.onerror = err => {
-        setState(prev => ({
-          ...prev,
-          status: 'error',
-          errorMessage: err.message,
-        }));
-        workersRef.current.forEach(w => w.terminate());
-        workersRef.current = [];
-      };
-
-      workersRef.current.push(worker);
-
-      // Transfer pdfBuffer to worker (zero-copy) — keeps main thread memory free
-      // Note: slice(0) copies the buffer so each worker gets its own ArrayBuffer.
-      const bufferCopy = pdfBufferRef.current.slice(0);
-      
-      const direction = i < forwardWorkers ? 'forward' : 'reverse';
-      const strideId = i < forwardWorkers ? i : i - forwardWorkers;
-      const strideCount = direction === 'forward' ? forwardWorkers : reverseWorkers;
-
-      const isBidirectional = reverseWorkers > 0;
-
-      const startMsg: WorkerStartMessage = {
-        type: 'START',
-        pdfBuffer: bufferCopy,
-        tokens,
-        knownChars: config.knownChars,
-        direction,
-        strideId,
-        strideCount,
-        isBidirectional
-      };
-      worker.postMessage(startMsg, [bufferCopy]);
-    }
+    workersRef.current = startRecoveryPool(
+      { pdfUrl: pdfUrlRef.current, tokens, knownChars: config.knownChars, yearRange: config.yearRange },
+      {
+        onProgress: applyProgress,
+        onFound: password => setState(prev => ({ ...prev, status: 'found', foundPassword: password })),
+        onExhausted: () => setState(prev => ({ ...prev, status: 'exhausted', tested: prev.total })),
+        onError: message => setState(prev => ({ ...prev, status: 'error', errorMessage: message })),
+        onNotPasswordProtected: () =>
+          setState(prev => ({ ...prev, status: 'error', errorMessage: NOT_PASSWORD_PROTECTED_MESSAGE })),
+      }
+    );
 
     setState({
       ...INITIAL_STATE,
       status: 'running',
-      activeWorkers: numWorkers,
+      activeWorkers: getWorkerCount(),
     });
-  }, [stop]);
+  }, [stop, applyProgress]);
 
   const reset = useCallback(() => {
     stop();
     setState(INITIAL_STATE);
-    pdfBufferRef.current = null;
-  }, [stop]);
+    revokePdfUrl();
+  }, [stop, revokePdfUrl]);
 
   const clearResults = useCallback(() => {
     stop();
@@ -216,4 +148,3 @@ export function usePDFRecovery() {
 
   return { state, loadPDF, start, stop, reset, clearResults, setError };
 }
-

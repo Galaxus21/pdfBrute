@@ -1,7 +1,3 @@
-/**
- * ResultCard.tsx
- * SRP: Renders the final outcome of the recovery attempt.
- */
 import React, { useState } from 'react';
 import { css } from 'aphrodite';
 import { type ThemeTokens, getStatusColors, getCardStyle, getIconBoxStyle, getLabelCapsStyle } from '../styles/theme';
@@ -9,13 +5,9 @@ import { useTheme } from '../styles/themeContext';
 import { useThemeStyles } from '../hooks/useThemeStyles';
 import { utils, mobileView } from '../styles/utilities';
 import type { RecoveryState } from '../types';
-import { formatCount } from '../utils/validators';
+import { formatCount, formatElapsedTime } from '../utils/formatting';
 
-interface ResultCardProps {
-  state: RecoveryState;
-}
-
-export const ResultCard: React.FC<ResultCardProps> = ({ state }) => {
+export const ResultCard: React.FC<{ state: RecoveryState }> = ({ state }) => {
   const { theme } = useTheme();
   const styles = useThemeStyles(getStyles);
 
@@ -28,13 +20,6 @@ export const ResultCard: React.FC<ResultCardProps> = ({ state }) => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  };
-
-  const formatTime = (ms: number) => {
-    const seconds = Math.floor(ms / 1000);
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
   if (status !== 'found' && status !== 'exhausted' && status !== 'error') {
@@ -91,7 +76,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({ state }) => {
         ) : (
           <div style={{ padding: theme.spacing.gutterMd, textAlign: 'center' }}>
             <p style={{ color: theme.colors.onSurfaceVariant, margin: 0, fontFamily: theme.typography.fontBody, fontSize: theme.typography.sizes.bodyMd }}>
-              {errorMessage || 'No password matched the given pattern. Try expanding or double-checking the pattern.'}
+              {errorMessage || 'No password matched within the printable-ASCII search space for this pattern. Try expanding the pattern, double-checking any pinned characters, or widening the year range.'}
             </p>
           </div>
         )}
@@ -101,7 +86,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({ state }) => {
       <div className={css(styles.footer)}>
         <div className={css(utils.flexRow, utils.justifySpaceBetween, utils.alignItemsCenter, styles.footerInner)}>
           <span className={css(styles.footerStat)}>
-            Time: <span className={css(styles.footerValue)}>{formatTime(elapsedMs)}</span>
+            Time: <span className={css(styles.footerValue)}>{formatElapsedTime(elapsedMs)}</span>
           </span>
           <span className={css(styles.footerStat)}>
             Checked: <span className={css(styles.footerValue)}>{formatCount(tested)}</span>

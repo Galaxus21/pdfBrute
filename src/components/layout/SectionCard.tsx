@@ -4,12 +4,7 @@ import { type ThemeTokens, getCardStyle, getLabelCapsStyle } from '../../styles/
 import { useThemeStyles } from '../../hooks/useThemeStyles';
 import { utils } from '../../styles/utilities';
 
-interface SectionCardProps {
-  title: string;
-  children: React.ReactNode;
-}
-
-export const SectionCard: React.FC<SectionCardProps> = ({ title, children }) => {
+export const SectionCard = ({ title, children }: { title: string; children: React.ReactNode }) => {
   const styles = useThemeStyles(getStyles);
 
   return (

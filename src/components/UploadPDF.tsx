@@ -1,14 +1,11 @@
-/**
- * UploadPDF.tsx
- * SRP: Handles only PDF file selection and validation feedback.
- */
 import React from 'react';
 import { Upload } from 'antd';
 import { css } from 'aphrodite';
 import type { UploadFile } from 'antd/es/upload/interface';
-import { type ThemeTokens, getIconBoxStyle } from '../styles/theme';
+import { type ThemeTokens, getIconBoxStyle, getDisabledStyle } from '../styles/theme';
 import { useThemeStyles } from '../hooks/useThemeStyles';
 import { utils, mobileView } from '../styles/utilities';
+import { formatFileSize } from '../utils/formatting';
 
 interface UploadPDFProps {
   onFileLoaded: (file: File) => void;
@@ -24,11 +21,6 @@ export const UploadPDF: React.FC<UploadPDFProps> = ({ onFileLoaded, onFileRemove
     setSelectedFile(file);
     onFileLoaded(file);
     return false; // prevent automatic upload
-  };
-
-  const formatSize = (bytes: number): string => {
-    if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(1)} MB`;
-    return `${(bytes / 1024).toFixed(1)} KB`;
   };
 
   const handleRemove = () => {
@@ -62,14 +54,14 @@ export const UploadPDF: React.FC<UploadPDFProps> = ({ onFileLoaded, onFileRemove
         <div className={css(utils.flexRow, utils.alignItemsCenter, utils.justifySpaceBetween, styles.fileInfo)}>
           <div className={css(utils.flexRow, utils.alignItemsCenter, styles.fileInfoGroup)}>
             <div className={css(styles.fileIconWrapper)}>
-              <span className="material-symbols-outlined" style={{ fontSize: 24, color: '#ba1a1a' }}>picture_as_pdf</span>
+              <span className={`material-symbols-outlined ${css(styles.pdfIcon)}`}>picture_as_pdf</span>
             </div>
             <div className={css(utils.flexColumn, styles.fileDetails)}>
               <span className={css(styles.fileName)} title={selectedFile.name}>
                 {selectedFile.name}
               </span>
               <span className={css(styles.fileMeta)}>
-                {formatSize(selectedFile.size)}
+                {formatFileSize(selectedFile.size)}
               </span>
             </div>
           </div>
@@ -143,6 +135,10 @@ const getStyles = (theme: ThemeTokens) => ({
   fileIconWrapper: {
     ...getIconBoxStyle(theme),
   },
+  pdfIcon: {
+    fontSize: 24,
+    color: theme.colors.error,
+  },
   fileDetails: {
     gap: '4px',
   },
@@ -166,13 +162,13 @@ const getStyles = (theme: ThemeTokens) => ({
   removeBtn: {
     color: theme.colors.onSurfaceVariant,
     backgroundColor: theme.colors.surfaceContainerLowest,
-    borderRadius: theme.shape.radiusIconBox, // rounded-full
+    borderRadius: theme.shape.radiusIconBox,
     padding: theme.spacing.unit,
     border: `1px solid ${theme.colors.outlineVariant}`,
     boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
     cursor: 'pointer',
     transition: 'all 0.2s',
     ':hover': { color: theme.colors.error },
-    ':disabled': { opacity: 0.5, cursor: 'not-allowed' },
+    ...getDisabledStyle(),
   },
 });

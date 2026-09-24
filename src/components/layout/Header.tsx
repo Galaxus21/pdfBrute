@@ -1,21 +1,18 @@
 import React from 'react';
 import { css } from 'aphrodite';
 import { type ThemeTokens, getLabelCapsStyle } from '../../styles/theme';
+import { useTheme } from '../../styles/themeContext';
 import { useThemeStyles } from '../../hooks/useThemeStyles';
 import { utils, mobileView } from '../../styles/utilities';
 
-interface HeaderProps {
-  theme: string;
-  toggleTheme: () => void;
-}
-
-export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme }) => {
+export const Header: React.FC = () => {
+  const { theme, toggleTheme } = useTheme();
   const styles = useThemeStyles(getStyles);
 
   const handleShare = async () => {
     const shareData = {
       title: 'PDFBrute - PDF Password Recovery',
-      text: 'Recover your forgotten PDF passwords securely in your browser using multi-core parallel processing and bidirectional search. 100% private, no uploads!',
+      text: 'Recover your forgotten PDF passwords securely in your browser using multi-core parallel processing and contiguous range partitioning. 100% private, no uploads!',
       url: window.location.href,
     };
     try {
@@ -56,10 +53,10 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme }) => {
             aria-label="Toggle Theme"
             className={css(utils.flexRow, styles.iconButton)}
             onClick={toggleTheme}
-            title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
+            title={`Switch to ${theme.mode === 'light' ? 'Dark' : 'Light'} Mode`}
           >
             <span className="material-symbols-outlined">
-              {theme === 'light' ? 'dark_mode' : 'light_mode'}
+              {theme.mode === 'light' ? 'dark_mode' : 'light_mode'}
             </span>
           </button>
         </div>

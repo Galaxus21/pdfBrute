@@ -1,21 +1,12 @@
-/**
- * ProgressBar.tsx
- * SRP: Real-time visualization of the recovery progress.
- * Now styled using Aphrodite to match the Stitch design.
- */
 import React from 'react';
 import { css } from 'aphrodite';
 import { type ThemeTokens, getCardStyle, getLabelCapsStyle } from '../styles/theme';
 import { useThemeStyles } from '../hooks/useThemeStyles';
 import { utils, mobileView, tabletView } from '../styles/utilities';
 import type { RecoveryState } from '../types';
-import { formatCount } from '../utils/validators';
+import { formatCount, formatSpeed, formatDuration } from '../utils/formatting';
 
-interface ProgressBarProps {
-  state: RecoveryState;
-}
-
-export const RecoveryProgress: React.FC<ProgressBarProps> = ({ state }) => {
+export const RecoveryProgress: React.FC<{ state: RecoveryState }> = ({ state }) => {
   const styles = useThemeStyles(getStyles);
 
   const { currentPassword: currentCandidate, tested, total: totalCombinations, speed, elapsedMs } = state;
@@ -23,30 +14,11 @@ export const RecoveryProgress: React.FC<ProgressBarProps> = ({ state }) => {
 
   const progress = totalCombinations > 0 ? (tested / totalCombinations) * 100 : 0;
 
-  const stats = {
-    totalTested: tested,
-    speed,
-    elapsedSeconds: Math.floor(elapsedMs / 1000),
-    etaSeconds: speed > 0 ? Math.floor((totalCombinations - tested) / speed) : null,
-  };
-
-  const formatSpeed = (speed: number) => {
-    if (speed > 1000) return `${(speed / 1000).toFixed(1)}k/s`;
-    return `${speed}/s`;
-  };
-
-  const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    
-    if (h > 0) return `${h}h ${m}m ${s}s`;
-    if (m > 0) return `${m}m ${s}s`;
-    return `${s}s`;
-  };
+  const elapsedSeconds = Math.floor(elapsedMs / 1000);
+  const etaSeconds = speed > 0 ? Math.floor((totalCombinations - tested) / speed) : null;
 
   // Prevent divide by zero / initial state issues
-  const testedCount = stats.totalTested > 0 ? formatCount(stats.totalTested) : '0';
+  const testedCount = tested > 0 ? formatCount(tested) : '0';
   const totalStr = totalCombinations ? formatCount(totalCombinations) : '...';
   const percent = Math.min(100, Math.max(0, progress));
 
@@ -94,16 +66,16 @@ export const RecoveryProgress: React.FC<ProgressBarProps> = ({ state }) => {
         </div>
         <div className={css(utils.flexColumn, styles.statBox)}>
           <span className={css(styles.statLabel)}>Speed</span>
-          <span className={css(styles.statValue, styles.textPrimary)}>{formatSpeed(stats.speed)}</span>
+          <span className={css(styles.statValue, styles.textPrimary)}>{formatSpeed(speed)}</span>
         </div>
         <div className={css(utils.flexColumn, styles.statBox)}>
           <span className={css(styles.statLabel)}>Elapsed</span>
-          <span className={css(styles.statValue)}>{formatTime(stats.elapsedSeconds)}</span>
+          <span className={css(styles.statValue)}>{formatDuration(elapsedSeconds)}</span>
         </div>
         <div className={css(utils.flexColumn, styles.statBox)}>
           <span className={css(styles.statLabel)}>ETA</span>
           <span className={css(styles.statValue, styles.textSecondary)}>
-            {stats.etaSeconds !== null ? formatTime(stats.etaSeconds) : '—'}
+            {etaSeconds !== null ? formatDuration(etaSeconds) : '—'}
           </span>
         </div>
       </div>
