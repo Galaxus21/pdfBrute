@@ -10,6 +10,12 @@ import { parsePattern } from '../utils/patterns';
 const MIN_YEAR = 0;
 const MAX_YEAR = 9999;
 
+const YEAR_PRESETS = [
+  { label: '2000–2030', from: 2000, to: 2030 },
+  { label: '1970–2010', from: 1970, to: 2010 },
+  { label: '1900–2100 (Default)', from: 1900, to: 2100 },
+];
+
 interface GeneratorSettingsProps {
   config: PatternConfig;
   onChange: (updates: Partial<PatternConfig>) => void;
@@ -113,6 +119,15 @@ export const GeneratorSettings: React.FC<GeneratorSettingsProps> = ({
                   inputMode="numeric"
                   value={yearRange.from === 0 ? '' : yearRange.from}
                   onChange={e => onChange({ yearRange: { ...yearRange, from: clampYear(e.target.value, yearRange.from) } })}
+                  onKeyDown={e => {
+                    if (e.key === 'ArrowUp' && e.shiftKey) {
+                      e.preventDefault();
+                      onChange({ yearRange: { ...yearRange, from: Math.min(MAX_YEAR, yearRange.from + 10) } });
+                    } else if (e.key === 'ArrowDown' && e.shiftKey) {
+                      e.preventDefault();
+                      onChange({ yearRange: { ...yearRange, from: Math.max(MIN_YEAR, yearRange.from - 10) } });
+                    }
+                  }}
                   onBlur={() => {
                     if (yearRange.from === 0) {
                       onChange({ yearRange: { ...yearRange, from: 1900 } });
@@ -130,6 +145,15 @@ export const GeneratorSettings: React.FC<GeneratorSettingsProps> = ({
                   inputMode="numeric"
                   value={yearRange.to === 0 ? '' : yearRange.to}
                   onChange={e => onChange({ yearRange: { ...yearRange, to: clampYear(e.target.value, yearRange.to) } })}
+                  onKeyDown={e => {
+                    if (e.key === 'ArrowUp' && e.shiftKey) {
+                      e.preventDefault();
+                      onChange({ yearRange: { ...yearRange, to: Math.min(MAX_YEAR, yearRange.to + 10) } });
+                    } else if (e.key === 'ArrowDown' && e.shiftKey) {
+                      e.preventDefault();
+                      onChange({ yearRange: { ...yearRange, to: Math.max(MIN_YEAR, yearRange.to - 10) } });
+                    }
+                  }}
                   onBlur={() => {
                     if (yearRange.to === 0) {
                       onChange({ yearRange: { ...yearRange, to: 2100 } });
@@ -141,6 +165,22 @@ export const GeneratorSettings: React.FC<GeneratorSettingsProps> = ({
                   className={css(styles.yearInput)}
                   aria-label="Year range end"
                 />
+              </div>
+
+              {/* Quick Presets */}
+              <div className={css(utils.flexRow, utils.alignItemsCenter, utils.flexWrap, styles.presetRow)}>
+                <span className={css(styles.presetLabel)}>Quick Presets:</span>
+                {YEAR_PRESETS.map(preset => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    className={css(styles.presetBtn)}
+                    onClick={() => onChange({ yearRange: { from: preset.from, to: preset.to } })}
+                    disabled={disabled}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
               </div>
             </div>
           )}
@@ -259,7 +299,7 @@ const getStyles = (theme: ThemeTokens) => ({
     color: theme.colors.onSurfaceVariant,
   },
   yearInput: {
-    width: '84px',
+    width: '88px',
     height: '40px',
     backgroundColor: theme.colors.surfaceContainerLowest,
     border: `1px solid ${theme.colors.outlineVariant}`,
@@ -273,6 +313,32 @@ const getStyles = (theme: ThemeTokens) => ({
     ':focus': {
       borderColor: theme.colors.primary,
       boxShadow: `0 0 0 1px ${theme.colors.primary}`,
+    },
+    ...getDisabledStyle(),
+  },
+  presetRow: {
+    gap: '8px',
+    marginTop: '10px',
+  },
+  presetLabel: {
+    fontFamily: theme.typography.fontMono,
+    fontSize: '11px',
+    color: theme.colors.onSurfaceVariant,
+    fontWeight: theme.typography.weights.medium,
+  },
+  presetBtn: {
+    backgroundColor: theme.colors.surfaceContainerLowest,
+    border: `1px solid ${theme.colors.outlineVariant}`,
+    color: theme.colors.primary,
+    fontFamily: theme.typography.fontMono,
+    fontSize: '11px',
+    padding: '3px 10px',
+    borderRadius: theme.shape.radiusButton,
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+    ':hover': {
+      backgroundColor: theme.colors.surfaceContainerLow,
+      borderColor: theme.colors.primary,
     },
     ...getDisabledStyle(),
   },
